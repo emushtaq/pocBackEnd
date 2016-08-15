@@ -11,3 +11,5 @@ GET     /assets/*file               controllers.Assets.versioned(path="/public",
 # API ENDPOINTS
 GET     /routes                      controllers.Application.getRoutes()
 GET     /itineraries                 controllers.Application.getInineraries(fromX: String, fromY: String, toX: String, toY: String, journeyTime: String, journeyDate: String, maxWalkDistance: Integer = 500, arriveBy: Boolean = false, wheelchair: Boolean = false)
+POST 	/client_token				 controllers.Application.createClientToken()
+

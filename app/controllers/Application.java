@@ -5,6 +5,8 @@ import java.util.Random;
 
 import javax.inject.Inject;
 
+import com.braintreegateway.BraintreeGateway;
+import com.braintreegateway.Environment;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
@@ -31,8 +33,19 @@ public class Application extends Controller {
 	private static final String KEY_QUOTES = "\"";
 	private static final String KEY_COORDINATE_SEPARATOR = ",";
 	private static final String BASE_URL = "http://5.189.168.220:4567/PlannerAPI";
-	private static final int MAX_PRICE = 5;
-	private static final int MIN_PRICE = 3;
+	private static int MIN_PRICE = 3;
+	private static int MAX_PRICE = 5;
+
+	private static final String PRIVATE_KEY = "00734b2cf85247be224b78d9668c0dcf";
+	private static final String PUBLIC_KEY = "mcv3w4d3stwtbbw5";
+	private static final String MERCHANT_ID = "9pdxdhmv8rcz7rrg";
+	
+	private static BraintreeGateway gateway = new BraintreeGateway(
+			  Environment.SANDBOX,
+			  MERCHANT_ID,
+			  PUBLIC_KEY,
+			  PRIVATE_KEY
+			);
 	
 	@Inject
 	private WSClient ws;
@@ -78,6 +91,10 @@ public class Application extends Controller {
 		return apiResponse.map(response -> ok(randomisePriceForItineraries(response.asJson().findPath("itineraries"))));
 
 	}
+	
+	public Result createClientToken() {
+	    return ok(gateway.clientToken().generate());
+	}
 
 	private JsonNode randomisePriceForItineraries(JsonNode itineraries) {
 		if (itineraries.isArray()) {
@@ -105,11 +122,11 @@ public class Application extends Controller {
 	public static int getRandomPrice(int min, int max, Long distance) {
 		/* Random function assigning arbitrary pricing.*/
 		if(distance <= 500) {
-			return 3;
+			return min;
 		} else if(distance <= 1000) {
-			return 4;
+			return min+max/2;
 		} else {
-			return 5;
+			return max;
 		}
 	}
 }
