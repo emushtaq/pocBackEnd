@@ -34,8 +34,6 @@ public class Application extends Controller {
 	private static final int MAX_PRICE = 5;
 	private static final int MIN_PRICE = 3;
 	
-	private static Random randomGenerator = new Random();
-
 	@Inject
 	private WSClient ws;
 
@@ -95,7 +93,7 @@ public class Application extends Controller {
 		if(itinerary.findPath("legs").isArray()){
 				for (JsonNode leg : itinerary.findPath("legs")) {
 					if(!leg.findValue("mode").asText().toUpperCase().equals("WALK")) {
-						int price = getRandomPrice(MIN_PRICE, MAX_PRICE);
+						int price = getRandomPrice(MIN_PRICE, MAX_PRICE, leg.findValue("distance").asLong());
 						((ObjectNode)leg).put(KEY_PRICE, price);
 						totalPrice += price;
 					}
@@ -104,9 +102,14 @@ public class Application extends Controller {
 		((ObjectNode)itinerary).put(KEY_TOTAL_PRICE, totalPrice);
 	}
 
-	public static int getRandomPrice(int min, int max) {
-		int randomNum = randomGenerator.nextInt((max - min) + 1) + min;
-		return randomNum;
+	public static int getRandomPrice(int min, int max, Long distance) {
+		/* Random function assigning arbitrary pricing.*/
+		if(distance <= 500) {
+			return 3;
+		} else if(distance <= 1000) {
+			return 4;
+		} else {
+			return 5;
+		}
 	}
-
 }
