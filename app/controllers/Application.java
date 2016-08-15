@@ -27,11 +27,14 @@ public class Application extends Controller {
 	private static final String KEY_TO_PLACE = "toPlace";
 	private static final String KEY_FROM_PLACE = "fromPlace";
 	private static final String KEY_PRICE = "price";
+	private static final String KEY_TOTAL_PRICE = "totalPrice";
 	private static final String KEY_QUOTES = "\"";
 	private static final String KEY_COORDINATE_SEPARATOR = ",";
 	private static final String BASE_URL = "http://5.189.168.220:4567/PlannerAPI";
 	private static final int MAX_PRICE = 5;
 	private static final int MIN_PRICE = 3;
+	
+	private static Random randomGenerator = new Random();
 
 	@Inject
 	private WSClient ws;
@@ -74,21 +77,34 @@ public class Application extends Controller {
 
 		F.Promise<WSResponse> apiResponse = complexRequest.get();
 
-		return apiResponse.map(response -> ok(randomisePrices(response.asJson().findPath("itineraries"))));
+		return apiResponse.map(response -> ok(randomisePriceForItineraries(response.asJson().findPath("itineraries"))));
 
 	}
 
-	private JsonNode randomisePrices(JsonNode itineraries) {
+	private JsonNode randomisePriceForItineraries(JsonNode itineraries) {
 		if (itineraries.isArray()) {
-			Random randomGenerator = new Random();
 			for (JsonNode itinerary : itineraries) {
-				((ObjectNode)itinerary).put(KEY_PRICE, getRandomPrice(MIN_PRICE, MAX_PRICE, randomGenerator));
+				generateRandomLegPrices(itinerary);
 			}
 		}
 		return itineraries;
 	}
 
-	public static int getRandomPrice(int min, int max, Random randomGenerator) {
+	private void generateRandomLegPrices(JsonNode itinerary) {
+		int totalPrice = 0;
+		if(itinerary.findPath("legs").isArray()){
+				for (JsonNode leg : itinerary.findPath("legs")) {
+					if(!leg.findValue("mode").asText().toUpperCase().equals("WALK")) {
+						int price = getRandomPrice(MIN_PRICE, MAX_PRICE);
+						((ObjectNode)leg).put(KEY_PRICE, price);
+						totalPrice += price;
+					}
+				}
+		}
+		((ObjectNode)itinerary).put(KEY_TOTAL_PRICE, totalPrice);
+	}
+
+	public static int getRandomPrice(int min, int max) {
 		int randomNum = randomGenerator.nextInt((max - min) + 1) + min;
 		return randomNum;
 	}
