@@ -1,12 +1,16 @@
 package controllers;
 
+import java.math.BigDecimal;
 import java.util.Date;
 import java.util.Random;
 
 import javax.inject.Inject;
 
 import com.braintreegateway.BraintreeGateway;
+import com.braintreegateway.Transaction;
 import com.braintreegateway.Environment;
+import com.braintreegateway.TransactionRequest;
+import com.braintreegateway.ValidationError;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
@@ -16,6 +20,7 @@ import play.libs.ws.WSClient;
 import play.libs.ws.WSRequest;
 import play.libs.ws.WSResponse;
 import play.mvc.Controller;
+import play.mvc.Http.RequestBody;
 import play.mvc.Result;
 import play.twirl.api.Content;
 
@@ -94,6 +99,39 @@ public class Application extends Controller {
 	
 	public Result createClientToken() {
 	    return ok(gateway.clientToken().generate());
+	}
+	
+	public Result checkoutRoute() {
+		RequestBody body = request().body();
+		String nonce = body.asJson().findPath("paymentMethodNonce").asText();
+		String amount = body.asJson().findPath("amount").asText();
+		
+		Logger.info("Nonce:" + nonce);
+		Logger.info("Amount:" + amount);
+	    
+		TransactionRequest transactionRequest = new TransactionRequest()
+	    .amount(new BigDecimal(amount))
+	    .paymentMethodNonce(nonce)
+	    .options()
+	      .submitForSettlement(true)
+	      .done();
+
+		com.braintreegateway.Result<Transaction> transactionResult = gateway.transaction().sale(transactionRequest);
+		
+		String message = "";
+		if (transactionResult.isSuccess()) {
+            message = "SUCCESS!";
+        } else if (transactionResult.getTransaction() != null) {
+            message = "NULL TRANSACIION";
+        } else {
+            String errorString = "";
+            for (ValidationError error : transactionResult.getErrors().getAllDeepValidationErrors()) {
+               errorString += "Error: " + error.getCode() + ": " + error.getMessage() + "\n";
+            }
+            message = errorString;
+        }
+
+		return ok(message);
 	}
 
 	private JsonNode randomisePriceForItineraries(JsonNode itineraries) {
