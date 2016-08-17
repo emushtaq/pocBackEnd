@@ -10,6 +10,7 @@ libraryDependencies ++= Seq(
   javaJdbc,
   cache,
   javaWs,
+  filters,
   "com.google.code.gson" % "gson" % "2.2.4"
 )
 

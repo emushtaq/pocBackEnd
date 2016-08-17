@@ -1,31 +1,30 @@
 package controllers;
 
 import java.math.BigDecimal;
-import java.util.Date;
-import java.util.Random;
 
 import javax.inject.Inject;
 
-import com.braintreegateway.BraintreeGateway;
-import com.braintreegateway.Transaction;
-import com.braintreegateway.Environment;
-import com.braintreegateway.TransactionRequest;
-import com.braintreegateway.ValidationError;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-
 import play.Logger;
 import play.libs.F;
+import play.libs.Json;
 import play.libs.ws.WSClient;
 import play.libs.ws.WSRequest;
 import play.libs.ws.WSResponse;
 import play.mvc.Controller;
 import play.mvc.Http.RequestBody;
 import play.mvc.Result;
-import play.twirl.api.Content;
 
+import com.braintreegateway.BraintreeGateway;
+import com.braintreegateway.Environment;
+import com.braintreegateway.Transaction;
+import com.braintreegateway.TransactionRequest;
+import com.braintreegateway.ValidationError;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
+@CorsComposition.Cors
 public class Application extends Controller {
-
+	
 	private static final String KEY_WHEELCHAIR = "wheelchair";
 	private static final String KEY_ARRIVE_BY = "arriveBy";
 	private static final String KEY_MAX_WALK_DISTANCE = "maxWalkDistance";
@@ -54,6 +53,10 @@ public class Application extends Controller {
 	
 	@Inject
 	private WSClient ws;
+	
+	public Result preflight(String path) {
+	    return ok("");
+	}
 
 	public Result index() {
 		return ok("Server is up and running. Fire Away!");
@@ -62,7 +65,7 @@ public class Application extends Controller {
 	public F.Promise<Result> getRoutes() {
 
 		WSRequest complexRequest = ws.url(BASE_URL)
-				.setRequestTimeout(1000)
+				.setRequestTimeout(2000)
 				.setQueryParameter(KEY_FROM_PLACE, "\"52.52656141115588,13.358001708984375\"")
 				.setQueryParameter(KEY_TO_PLACE, "\"52.493233155027156,13.422374725341797\"")
 				.setQueryParameter(KEY_TIME, "\"05:13:00pm\"")
@@ -90,6 +93,8 @@ public class Application extends Controller {
 				.setQueryParameter(KEY_MAX_WALK_DISTANCE, KEY_QUOTES + maxWalkDistance + KEY_QUOTES)
 				.setQueryParameter(KEY_ARRIVE_BY, KEY_QUOTES + arriveBy + KEY_QUOTES)
 				.setQueryParameter(KEY_WHEELCHAIR, KEY_QUOTES + wheelchair + KEY_QUOTES);
+		
+		Logger.info("QUERY: " + complexRequest.getQueryParameters());
 
 		F.Promise<WSResponse> apiResponse = complexRequest.get();
 
@@ -120,18 +125,10 @@ public class Application extends Controller {
 		
 		String message = "";
 		if (transactionResult.isSuccess()) {
-            message = "SUCCESS!";
-        } else if (transactionResult.getTransaction() != null) {
-            message = "NULL TRANSACIION";
+			return ok("Payment Complete!");
         } else {
-            String errorString = "";
-            for (ValidationError error : transactionResult.getErrors().getAllDeepValidationErrors()) {
-               errorString += "Error: " + error.getCode() + ": " + error.getMessage() + "\n";
-            }
-            message = errorString;
-        }
-
-		return ok(message);
+        	return internalServerError("Oops. Something went wrong in the transaction. " + transactionResult.getMessage());
+        } 
 	}
 
 	private JsonNode randomisePriceForItineraries(JsonNode itineraries) {
